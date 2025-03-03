@@ -6,7 +6,7 @@ import kaggle
 
 kaggle.api.dataset_download_files(
     "andrewmvd/drive-digital-retinal-images-for-vessel-extraction", 
-    path="/mnt/c/dataset", 
+    # path="/mnt/c/dataset", 
     unzip=True  # 自动解压
 )
 
