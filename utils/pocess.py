@@ -4,5 +4,5 @@ import cv2
 import random
 from torch.utils.data import Dataset
 
-from ..dataloader.drive_load import load_data
+from ..dataset.drive import load_data
 
