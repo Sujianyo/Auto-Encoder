@@ -78,7 +78,7 @@ from attention import *
 class Up(nn.Module):
     """Upscaling then double conv"""
 
-    def __init__(self, in_channels, out_channels, bilinear=True, attention_layer=0):
+    def __init__(self, in_channels, out_channels, bilinear=True, attention_layer=0, heads=8):
         super().__init__()
 
         # if bilinear, use the normal convolutions to reduce the number of channels
@@ -91,8 +91,11 @@ class Up(nn.Module):
 
 
         self.atten = []
-        for i in range(attention_layer):
-            self.atten.append(MultiHeadAttention(out_channels, heads=8, dim_head=64, dropout=0.))
+        self.atten = nn.ModuleList([
+            MultiHeadAttention(out_channels, heads=heads, dim_head=out_channels, dropout=0.)
+            for _ in range(attention_layer)
+        ])
+
     def forward(self, x1, x2):
         x1 = self.up(x1)
         # input is CHW
@@ -101,9 +104,13 @@ class Up(nn.Module):
 
         x1 = F.pad(x1, [diffX // 2, diffX - diffX // 2,
                         diffY // 2, diffY - diffY // 2])
-
+        
         x = torch.cat([x2, x1], dim=1)
-        return self.conv(x)
+        x = self.conv(x)
+
+        for layer in self.atten:
+            x = layer(x, x)
+        return x
 
 
 
