@@ -73,7 +73,7 @@ class OutConv(nn.Module):
         return self.conv(x)
     
 
-from attention import *
+from .attention import *
 
 class Up(nn.Module):
     """Upscaling then double conv"""
@@ -92,7 +92,7 @@ class Up(nn.Module):
 
         self.atten = []
         self.atten = nn.ModuleList([
-            MultiHeadAttention(out_channels, heads=heads, dim_head=out_channels, dropout=0.)
+            MultiHeadAttention(out_channels, heads=heads, dropout=0.)
             for _ in range(attention_layer)
         ])
 

@@ -1,50 +1,89 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 class MultiHeadAttention(nn.Module):
-    def __init__(self, dim, heads=8, dim_head=64, dropout=0.):
+    def __init__(self, dim, heads=8, dropout=0., patch_kernel=7, ):
         super().__init__()
-        inner_dim = dim_head * heads
-        project_out = not (heads == 1 and dim_head == dim)
+        inner_dim = dim * patch_kernel**2
+        project_out = not (heads == 1)
+        
+        self.patch_kernel = patch_kernel
 
         self.heads = heads
-        self.dim_head = dim_head
-        self.scale = dim_head ** -0.5
+        self.dim_head = inner_dim//heads
+        self.scale = self.dim_head ** -0.5
 
-        self.norm = nn.LayerNorm(dim)
+        self.norm = nn.LayerNorm(inner_dim)
 
         self.attend = nn.Softmax(dim=-1)
         self.dropout = nn.Dropout(dropout)
 
-        self.to_q = nn.Linear(dim, inner_dim, bias=False)
-        self.to_k = nn.Linear(dim, inner_dim, bias=False)
-        self.to_v = nn.Linear(dim, inner_dim, bias=False)
+        self.to_q = nn.Linear(inner_dim, inner_dim, bias=False)
+        self.to_k = nn.Linear(inner_dim, inner_dim, bias=False)
+        self.to_v = nn.Linear(inner_dim, inner_dim, bias=False)
 
         self.to_out = nn.Sequential(
-            nn.Linear(inner_dim, dim),
+            nn.Linear(inner_dim, inner_dim),
             nn.Dropout(dropout)
         ) if project_out else nn.Identity()
+    def patch(self, x):
+        x = F.unfold(x, kernel_size=self.patch_kernel, stride=self.patch_kernel)
+        return x.transpose(1, 2)
+    def unpatch(self, x, output_size):
+        x = x.transpose(1, 2)
+        return F.fold(x, output_size=output_size, kernel_size=self.patch_kernel, stride=self.patch_kernel)    
+
     # [b, c, h, w] => [b, h*w, c] => [b, c, h, w]
-    def forward(self, query, key):
-        b1, n1, h, w = query.shape
-        query = query.view(b1, n1, h*w).transpose(1, 2)
-        key = key.view(b1, n1, h*w).transpose(1, 2)
+    # def forward(self, query):
+    #     # self attention
+    #     _, _, h, w = query.shape
+    #     query = self.patch(query)
+    #     b, n, c = query.shape
+    #     query = self.norm(query)
+
+    #     q_ = self.to_q(query)
+    #     k_ = self.to_k(query)
+    #     v_ = self.to_v(query)
+
+    #     q = q_.view(b, n, self.heads, self.dim_head).transpose(1, 2)
+    #     k = k_.view(b, n, self.heads, self.dim_head).transpose(1, 2)
+    #     v = v_.view(b, n, self.heads, self.dim_head).transpose(1, 2)
+
+    #     dots = torch.matmul(q, k.transpose(2, 3)) * self.scale
+
+    #     attn = self.attend(dots)
+    #     attn = self.dropout(attn)
+
+    #     out = torch.matmul(attn, v)  # (b, heads, n, dim_head)
+
+    #     # reshape back to (b, n, heads * dim_head)
+    #     out = out.transpose(1, 2).contiguous().view(b, n, self.heads * self.dim_head)
+    #     out = self.to_out(out)
+
+    #     return self.unpatch(out, (h, w))
+
+    def forward(self, query, key=None):
+        # cross attention
+        _, _, h, w = query.shape
+        query = self.patch(query)
+        key = self.patch(key)
         b, n, _ = query.shape  # batch, sequence_length, embedding_dim
 
         query = self.norm(query)
         key = self.norm(key)
-        value = self.norm(key)
+        # value = self.norm(key)
 
         q_ = self.to_q(query)
         k_ = self.to_k(key)
-        v_ = self.to_v(value)
+        v_ = self.to_v(key)
 
         # reshape (b, n, heads * dim_head) -> (b, heads, n, dim_head)
         q = q_.view(b, n, self.heads, self.dim_head).transpose(1, 2)
         k = k_.view(b, n, self.heads, self.dim_head).transpose(1, 2)
         v = v_.view(b, n, self.heads, self.dim_head).transpose(1, 2)
 
-        dots = torch.matmul(q, k.transpose(-1, -2)) * self.scale
+        dots = torch.matmul(q, k.transpose(2, 3)) * self.scale
 
         attn = self.attend(dots)
         attn = self.dropout(attn)
@@ -54,7 +93,21 @@ class MultiHeadAttention(nn.Module):
         # reshape back to (b, n, heads * dim_head)
         out = out.transpose(1, 2).contiguous().view(b, n, self.heads * self.dim_head)
         out = self.to_out(out)
-        return out.transpose(1, 2).view(b1, n1, h, w)
+        return self.unpatch(out, (h, w))
+
+import torch
+
+# torch.cuda.reset_peak_memory_stats()
+
+# m = MultiHeadAttention(dim=64, heads=8, dropout=0.).to('cuda')
+# x = torch.rand(1, 64, 256, 256).to('cuda')
+# m(x, x)
+
+# max_mem = torch.cuda.max_memory_allocated()
+
+# print(f"Max memery: {max_mem / 1024**2:.2f} MB")
+
+
 # import numpy as np
 # m = MultiHeadAttention(80, heads=4, dim_head=20)
 # # print(m.to_q.weight.shape)
