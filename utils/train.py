@@ -21,4 +21,5 @@ def train_one_epoch(model: torch.nn.Module, data_loader: Iterable, optimizer: to
         optimizer.step()
         tbar.update(1)
         torch.cuda.empty_cache()
+        # print(losses)
     return outputs, losses

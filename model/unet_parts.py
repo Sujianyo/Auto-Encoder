@@ -108,8 +108,8 @@ class Up(nn.Module):
         x = torch.cat([x2, x1], dim=1)
         x = self.conv(x)
 
-        for layer in self.atten:
-            x = layer(x, x)
+        # for layer in self.atten:
+        #     x = layer(x, x)
         return x
 
 

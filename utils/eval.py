@@ -18,7 +18,7 @@ def iou_pytorch(predictions: torch.Tensor, labels: torch.Tensor, e: float = 1e-7
         labels = labels.squeeze(1)
 
     intersection = (predictions * labels).sum((1, 2))  # Element-wise multiplication
-    union = (predictions + labels).clamp(0, 1).sum((1, 2))  # Sum without overcounting
+    union = (predictions + labels - predictions*labels).clamp(0, 1).sum((1, 2))  # Sum without overcounting
 
     return (intersection + e) / (union + e)  # Add epsilon for numerical stability
 
@@ -54,8 +54,8 @@ def evaluate(model: torch.nn.Module, criterion: torch.nn.Module, data_loader: It
         # forward pass
         outputs = model(image.to(device))
         losses = criterion(outputs, label.to(device))
-        dice = dice_pytorch(outputs, label.to(device))
-        iou = iou_pytorch(outputs, label.to(device))
+        dice = dice_pytorch(outputs, label.to(device)).mean()
+        iou = iou_pytorch(outputs, label.to(device)).mean()
         # clear cache
         torch.cuda.empty_cache()
         eval_stats['crs'] = eval_stats['crs'] + losses
