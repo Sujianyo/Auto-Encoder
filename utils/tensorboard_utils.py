@@ -5,6 +5,7 @@ from torchvision.utils import make_grid
 from torch.utils.tensorboard import SummaryWriter
 
 # lgg dataset
+@torch.no_grad()
 def plot_to_tensorboard(n_examples, list_img_paths, list_mask_paths, writer: SummaryWriter, global_step=0, tag_name='MRI_Images'):
     for i in range(n_examples):
         img_path = list_img_paths[i]
@@ -39,7 +40,7 @@ import torch
 import numpy as np
 from torchvision.utils import make_grid
 from torch.utils.tensorboard import SummaryWriter
-
+@torch.no_grad()
 def visualize_segmentation_tensorboard(model, dataloader, device, writer: SummaryWriter, num_examples=4):
     model.eval()
 
@@ -87,7 +88,7 @@ def visualize_segmentation_tensorboard(model, dataloader, device, writer: Summar
         )
 
         writer.add_image(f"Segmentation/{idx}", grid, global_step=i)
-
+@torch.no_grad()
 def show_aug(datas, writer: SummaryWriter, norm=False, num_examples=4):
     dataset_size = len(datas.dataset)
     random_indices = random.sample(range(dataset_size), num_examples)

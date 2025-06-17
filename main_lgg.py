@@ -85,10 +85,10 @@ train_dataset = MRI_Dataset(df_train, img_transform=transforms)
 val_dataset = MRI_Dataset(df_val, img_transform=transforms)
 test_dataset = MRI_Dataset(df_test, img_transform=transforms)
 
-batch_size = 16
-train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-val_dataloader = DataLoader(val_dataset, batch_size=batch_size, shuffle=True)
-test_dataloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=True)
+batch_size = 4
+train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=0)
+val_dataloader = DataLoader(val_dataset, batch_size=batch_size, shuffle=True, num_workers=0)
+test_dataloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=True, num_workers=0)
 show_aug(train_dataloader, writer)
 
 for img, mask in train_dataloader:
@@ -96,7 +96,7 @@ for img, mask in train_dataloader:
     print(mask.shape)
     break
 
-model = UNet(attention_layer=2).to(device)
+model = UNet(attention_layer=1).to(device)
 # model = torch.load("model.pt", map_location=device, weights_only=False)
 # model.load_state_dict(torch.load("model.pt", map_location=device))
 optimizer = torch.optim.AdamW(model.parameters(), lr=1e-4, weight_decay=1e-4)

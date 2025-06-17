@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
+import torch.utils.checkpoint as cp
 
 class DoubleConv(nn.Module):
     """(convolution => [BN] => ReLU) * 2"""
@@ -114,6 +114,8 @@ class Up(nn.Module):
         
         for i in range(self.atten_layer):
         # for layer1, layer2 in map(self.self_atten, self.cross_atten):
+            # x1 = cp.checkpoint(self.self_atten[i], x1)
+            # x2 = cp.checkpoint(self.cross_atten[i], x2, x1)
             x1 = self.self_atten[i](x1)
             x2 = self.cross_atten[i](x2, key=x1)
         x = torch.cat([x1, x2], dim=1)

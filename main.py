@@ -25,6 +25,11 @@ from torch.fx import symbolic_trace
 from dataset.brain_35h import Br35H
 from datetime import datetime
 
+import os
+os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
+
+
 def log_final_predictions_to_tensorboard(model, dataloader, device, writer, num_images=4):
     import torch
     import torchvision
