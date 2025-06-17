@@ -91,8 +91,13 @@ class Up(nn.Module):
 
 
         self.atten = []
-        self.atten = nn.ModuleList([
-            MultiHeadAttention(out_channels, heads=heads, dropout=0.)
+        self.atten_layer = attention_layer
+        self.self_atten = nn.ModuleList([
+            MultiHeadAttention(in_channels//2, heads=heads, dropout=0.)
+            for _ in range(attention_layer)
+        ])
+        self.cross_atten = nn.ModuleList([
+            MultiHeadAttention(in_channels//2, heads=heads, dropout=0.)
             for _ in range(attention_layer)
         ])
 
@@ -105,11 +110,14 @@ class Up(nn.Module):
         x1 = F.pad(x1, [diffX // 2, diffX - diffX // 2,
                         diffY // 2, diffY - diffY // 2])
         
-        x = torch.cat([x2, x1], dim=1)
+        # x = torch.cat([x2, x1], dim=1)
+        
+        for i in range(self.atten_layer):
+        # for layer1, layer2 in map(self.self_atten, self.cross_atten):
+            x1 = self.self_atten[i](x1)
+            x2 = self.cross_atten[i](x2, key=x1)
+        x = torch.cat([x1, x2], dim=1)
         x = self.conv(x)
-
-        for layer in self.atten:
-            x = layer(x)
         return x
 
 

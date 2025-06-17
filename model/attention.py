@@ -41,6 +41,7 @@ class MultiHeadAttention(nn.Module):
         x = x.transpose(1, 2)
         return F.fold(x, output_size=output_size, kernel_size=self.patch_kernel, stride=self.patch_kernel)    
     def forward(self, query, key=None):
+    # def forward(self, query, key):
         # cross attention
         _, _, h, w = query.shape
         
@@ -53,7 +54,7 @@ class MultiHeadAttention(nn.Module):
         # value = self.norm(key)
         res_q = self.patch(query)
         q_ = self.to_q(query).flatten(-2).transpose(1, 2)
-        if key:
+        if key is not None:
             k_ = self.to_k(key).flatten(-2).transpose(1, 2)
             v_ = self.to_v(key).flatten(-2).transpose(1, 2)
         else:
@@ -88,18 +89,28 @@ class MultiHeadAttention(nn.Module):
         out = self.to_out(out)
         out = self.norm(out + res_q)
         return self.unpatch(out, (h, w))
-@torch.no_grad
+# @torch.no_grad
 class Position(nn.Module):
     def __init__(self, dim, abs=True):
         super().__init__()
         self.dim = dim
+        self.cache = {}
+    @torch.no_grad
     def forward(self, n_samples):
+        if n_samples in self.cache:
+            return self.cache[n_samples]
+
         position = torch.arange(n_samples).unsqueeze(1)
         positional_encoding = torch.zeros(1, n_samples, self.dim)
         _2i = torch.arange(0, self.dim, step=2).float()
         positional_encoding[0, :, 0::2] = torch.sin(position / (10000 ** (_2i / self.dim)))
         positional_encoding[0, :, 1::2] = torch.cos(position / (10000 ** (_2i / self.dim)))
+
+        self.cache[n_samples] = positional_encoding
         return positional_encoding
+
+
+
 
     # [b, c, h, w] => [b, h*w, c] => [b, c, h, w]
     # def forward(self, query):

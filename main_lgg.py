@@ -42,7 +42,7 @@ transforms = A.Compose([
     ToTensorV2(),
 ])
 
-device = torch.device('cuda')
+device = torch.device('cuda:1')
 seed = 42
 torch.manual_seed(seed)
 np.random.seed(seed)
@@ -58,7 +58,7 @@ log_dir = os.path.join("runs", experiment_name, model_name, timestamp)
 writer = SummaryWriter(log_dir=log_dir)
 
 
-mask_paths = glob.glob('/mnt/e/learning/Dataset/kaggle_3m/*/*_mask*')
+mask_paths = glob.glob('/home/yutong.cheng/kaggle_3m/*/*_mask*')
 image_paths = [i.replace('_mask', '') for i in mask_paths]
 print(f'{len(mask_paths)} {len(image_paths)}')
 print(f'Logs are saved to: {log_dir}')
@@ -96,7 +96,7 @@ for img, mask in train_dataloader:
     print(mask.shape)
     break
 
-model = UNet(attention_layer=4).to(device)
+model = UNet(attention_layer=2).to(device)
 # model = torch.load("model.pt", map_location=device, weights_only=False)
 # model.load_state_dict(torch.load("model.pt", map_location=device))
 optimizer = torch.optim.AdamW(model.parameters(), lr=1e-4, weight_decay=1e-4)
