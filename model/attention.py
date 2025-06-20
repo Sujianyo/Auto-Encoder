@@ -34,6 +34,7 @@ class MultiHeadAttention(nn.Module):
         ) if project_out else nn.Identity()
 
         self.pos = Position(inner_dim, pos_abs)
+        # self.pos_embed = Position()
     def patch(self, x):
         x = F.unfold(x, kernel_size=self.patch_kernel, stride=self.patch_kernel)
         return x.transpose(1, 2)
@@ -64,6 +65,7 @@ class MultiHeadAttention(nn.Module):
         b, n, _ = q_.shape
         ## Position embedding
         pos = self.pos(n).to(q_.device)
+        # pos = 0
         q_ += pos
         k_ += pos
         # q_ = self.norm(q_)
@@ -89,7 +91,7 @@ class MultiHeadAttention(nn.Module):
         out = self.to_out(out)
         out = self.norm(out + res_q)
         return self.unpatch(out, (h, w))
-# @torch.no_grad
+
 class Position(nn.Module):
     def __init__(self, dim, abs=True):
         super().__init__()
@@ -97,8 +99,8 @@ class Position(nn.Module):
         self.cache = {}
     @torch.no_grad
     def forward(self, n_samples):
-        if n_samples in self.cache:
-            return self.cache[n_samples]
+        # if n_samples in self.cache:
+        #     return self.cache[n_samples]
 
         position = torch.arange(n_samples).unsqueeze(1)
         positional_encoding = torch.zeros(1, n_samples, self.dim)
@@ -106,8 +108,28 @@ class Position(nn.Module):
         positional_encoding[0, :, 0::2] = torch.sin(position / (10000 ** (_2i / self.dim)))
         positional_encoding[0, :, 1::2] = torch.cos(position / (10000 ** (_2i / self.dim)))
 
-        self.cache[n_samples] = positional_encoding
+        # self.cache[n_samples] = positional_encoding
         return positional_encoding
+
+# @torch.no_grad
+# class Position(nn.Module):
+#     def __init__(self, dim, abs=True):
+#         super().__init__()
+#         self.dim = dim
+#         self.cache = {}
+#     @torch.no_grad
+#     def forward(self, n_samples):
+#         if n_samples in self.cache:
+#             return self.cache[n_samples]
+
+#         position = torch.arange(n_samples).unsqueeze(1)
+#         positional_encoding = torch.zeros(1, n_samples, self.dim)
+#         _2i = torch.arange(0, self.dim, step=2).float()
+#         positional_encoding[0, :, 0::2] = torch.sin(position / (10000 ** (_2i / self.dim)))
+#         positional_encoding[0, :, 1::2] = torch.cos(position / (10000 ** (_2i / self.dim)))
+
+#         self.cache[n_samples] = positional_encoding
+#         return positional_encoding
 
 
 
@@ -195,8 +217,10 @@ class Axial_Attention(nn.Module):
         ) if project_out else nn.Identity()
 
 
-    def forward(self, query, key):
-        b, n, _ = query.shape  # batch, sequence_length, embedding_dim
+    def forward(self, query, key = None):
+        b, n, h, w = query.shape  # batch, sequence_length, embedding_dim
+        query = query.permute(1, 3, 2, 0).flatten(2).permute(1, 2, 0)
+        
 
         query = self.norm(query)
         key = self.norm(key)

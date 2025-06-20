@@ -1,6 +1,5 @@
 from model.unet_model import UNet
 from model.loss import Criterion
-import argparse
 import torch
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
@@ -17,6 +16,7 @@ from utils.tensorboard_utils import *
 # from dataset import build_data_loader
 from utils.eval import evaluate
 from utils.inference import inference
+from utils.parser import get_args_parser
 import pandas as pd
 import torch
 import torch.nn as nn
@@ -29,8 +29,11 @@ from albumentations.pytorch import ToTensorV2
 import glob
 from sklearn.model_selection import train_test_split
 
-PATCH_SIZE = 128
 
+arg = get_args_parser()
+
+
+PATCH_SIZE = arg.patch_size
 transforms = A.Compose([
     A.Resize(width = PATCH_SIZE, height = PATCH_SIZE, p=1.0),
     A.HorizontalFlip(p=0.5),
@@ -42,24 +45,34 @@ transforms = A.Compose([
     ToTensorV2(),
 ])
 
-device = torch.device('cuda:1')
-seed = 42
+device = arg.device
+seed = arg.seed
 torch.manual_seed(seed)
 np.random.seed(seed)
 random.seed(seed)
-experiment_name = 'lgg_brain'
+experiment_name = arg.experiment_name
 
 
 ## MODEL Name
-experiment_name = 'lgg_brain'
-model_name = 'Unet_self_attention'
+experiment_name = arg.experiment_name
+if arg.axial:
+    model = UNet(attention_layer=arg.num_layer, axial=True).to(device)
+    model_name = 'Unet_axial_attention'
+elif arg.patchify:
+    model = UNet(attention_layer=arg.num_layer, axial=False).to(device)
+    model_name = 'Unet_self_attention'
+else:
+    model = UNet(attention_layer=0).to(device)
+    model_name = 'Unet_baseline'
 timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
 log_dir = os.path.join("runs", experiment_name, model_name, timestamp)
 writer = SummaryWriter(log_dir=log_dir)
 
+if arg.dataset == 'lgg_brain':
+    mask_paths = glob.glob(arg.dataset_dictionory + '/kaggle_3m/*/*_mask*')
+    image_paths = [i.replace('_mask', '') for i in mask_paths]
 
-mask_paths = glob.glob('/home/yutong.cheng/kaggle_3m/*/*_mask*')
-image_paths = [i.replace('_mask', '') for i in mask_paths]
+
 print(f'{len(mask_paths)} {len(image_paths)}')
 print(f'Logs are saved to: {log_dir}')
 # log_dir = os.path.join("runs", experiment_name or datetime.now().strftime("%Y%m%d-%H%M%S"))
@@ -85,7 +98,7 @@ train_dataset = MRI_Dataset(df_train, img_transform=transforms)
 val_dataset = MRI_Dataset(df_val, img_transform=transforms)
 test_dataset = MRI_Dataset(df_test, img_transform=transforms)
 
-batch_size = 4
+batch_size = 8
 train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=0)
 val_dataloader = DataLoader(val_dataset, batch_size=batch_size, shuffle=True, num_workers=0)
 test_dataloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=True, num_workers=0)
@@ -96,7 +109,7 @@ for img, mask in train_dataloader:
     print(mask.shape)
     break
 
-model = UNet(attention_layer=1).to(device)
+
 # model = torch.load("model.pt", map_location=device, weights_only=False)
 # model.load_state_dict(torch.load("model.pt", map_location=device))
 optimizer = torch.optim.AdamW(model.parameters(), lr=1e-4, weight_decay=1e-4)

@@ -55,7 +55,7 @@ def visualize_segmentation_tensorboard(model, dataloader, device, writer: Summar
             pred = model(img)
 
         # Prepare image tensors for TensorBoard
-        img_np = img.squeeze(0).cpu()
+        img_np = img.squeeze(0)
         if img_np.shape[0] == 1:
             img_disp = img_np.repeat(3, 1, 1)
         else:
@@ -65,8 +65,8 @@ def visualize_segmentation_tensorboard(model, dataloader, device, writer: Summar
         img_disp = (img_disp - img_disp.min()) / (img_disp.max() - img_disp.min() + 1e-8)
 
         # Process masks
-        mask_np = mask.squeeze().cpu().float().numpy()
-        pred_np = pred.squeeze().cpu().float().numpy()
+        mask_np = mask.squeeze().float().numpy()
+        pred_np = pred.squeeze().float().numpy()
         binary_pred_np = (pred_np > 0.5).astype(np.float32)
 
         def to_rgb_tensor(np_img):
@@ -95,13 +95,13 @@ def show_aug(datas, writer: SummaryWriter, norm=False, num_examples=4):
 
     for i, idx in enumerate(random_indices):
         img, mask = datas.dataset[idx]
-        img_np = img.squeeze(0).cpu()
+        img_np = img.squeeze(0)
         if img_np.shape[0] == 1:
             img_disp = img_np.repeat(3, 1, 1)
         else:
             img_disp = img_np[:3]  # limit to first 3 channels
         img_disp = (img_disp - img_disp.min()) / (img_disp.max() - img_disp.min() + 1e-8)
-        mask_np = mask.squeeze().cpu().float().numpy()
+        mask_np = mask.squeeze().float().numpy()
         def to_rgb_tensor(np_img):
             if np_img.ndim == 2:
                 tensor = torch.tensor(np_img).unsqueeze(0).float()
