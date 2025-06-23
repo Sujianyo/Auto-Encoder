@@ -8,6 +8,7 @@ def get_args_parser():
     parser = argparse.ArgumentParser('Set transformer detector', add_help=False)
     parser.add_argument('--experiment_name', default='lgg_brain', type=str)
     parser.add_argument('--seed', default=42, type=int)
+    parser.add_argument('--image_size', default=128, type=int)
     parser.add_argument('--patch_size', default=7, type=int)
     parser.add_argument('--device', default='cpu', type=str)
     parser.add_argument('--lr', default=1e-4, type=float)

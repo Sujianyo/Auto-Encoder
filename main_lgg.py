@@ -30,10 +30,9 @@ import glob
 from sklearn.model_selection import train_test_split
 
 
-arg = get_args_parser()
+arg = get_args_parser().parse_args()
 
-
-PATCH_SIZE = arg.patch_size
+PATCH_SIZE = arg.image_size
 transforms = A.Compose([
     A.Resize(width = PATCH_SIZE, height = PATCH_SIZE, p=1.0),
     A.HorizontalFlip(p=0.5),
@@ -69,7 +68,7 @@ log_dir = os.path.join("runs", experiment_name, model_name, timestamp)
 writer = SummaryWriter(log_dir=log_dir)
 
 if arg.dataset == 'lgg_brain':
-    mask_paths = glob.glob(arg.dataset_dictionory + '/kaggle_3m/*/*_mask*')
+    mask_paths = glob.glob(os.path.join(arg.dataset_directory + 'kaggle_3m/*/*_mask*'))
     image_paths = [i.replace('_mask', '') for i in mask_paths]
 
 
@@ -119,7 +118,7 @@ prev_best = np.inf
 
 print("Start training")
 start_epoch = 0
-epochs = 200
+epochs = arg.epochs
 for epoch in range(start_epoch, epochs):
     # train
     print("Epoch: %d" % epoch)
