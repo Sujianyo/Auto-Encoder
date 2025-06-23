@@ -124,7 +124,7 @@ class Up(nn.Module):
         x = torch.cat([x2, x1], dim=1)
         x = self.conv(x)
         for i in range(self.atten_layer):
-            x = cp.checkpoint(self.self_atten[i](x))
+            x = cp.checkpoint(self.self_atten[i], x)
         # for i in range(self.atten_layer):
         # for layer1, layer2 in map(self.self_atten, self.cross_atten):
             # x1 = cp.checkpoint(self.self_atten[i], x1)

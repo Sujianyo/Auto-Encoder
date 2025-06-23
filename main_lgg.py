@@ -68,7 +68,8 @@ log_dir = os.path.join("runs", experiment_name, model_name, timestamp)
 writer = SummaryWriter(log_dir=log_dir)
 
 if arg.dataset == 'lgg_brain':
-    mask_paths = glob.glob(os.path.join(arg.dataset_directory + 'kaggle_3m/*/*_mask*'))
+    print(os.path.join(arg.dataset_directory, 'kaggle_3m/*/*_mask*'))
+    mask_paths = glob.glob(os.path.join(arg.dataset_directory, 'kaggle_3m/*/*_mask*'))
     image_paths = [i.replace('_mask', '') for i in mask_paths]
 
 
