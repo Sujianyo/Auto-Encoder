@@ -167,7 +167,6 @@ class BraTSDataset(Dataset):
 
     def __len__(self):
         return len(self.samples)
-
     def __getitem__(self, idx):
         patient_id, z = self.samples[idx]
 
@@ -188,18 +187,66 @@ class BraTSDataset(Dataset):
         # Stack modalities into 4-channel image [C, H, W]
         image = np.stack(volume, axis=0).astype(np.float32)  # shape [4, H, W]
 
-        # Load mask
+        # Load and process mask
         mask_path = os.path.join(self.root_dir, patient_id, f"{patient_id}_seg.nii")
         mask_data = nib.load(mask_path).get_fdata()
         mask_slice = mask_data[:, :, z].astype(np.uint8)    # shape [H, W]
+        # print(np.unique(mask_slice))
+        # Convert to 3 binary masks: WT, TC, ET
+        wt_mask = np.where(mask_slice > 0, 1, 0).astype(np.uint8)
+        tc_mask = np.where((mask_slice == 1) | (mask_slice == 4), 1, 0).astype(np.uint8)
+        et_mask = np.where(mask_slice == 4, 1, 0).astype(np.uint8)
 
-        # Albumentations  HWC 
+        # Stack to [H, W, 3] for albumentations
+        mask_stack = np.stack([wt_mask, tc_mask, et_mask], axis=-1)  # [H, W, 3]
+
+        # Albumentations expects HWC image and HWC mask
         if self.transforms:
-            image = np.transpose(image, (1, 2, 0))  # [H, W, C]
-            augmented = self.transforms(image=image, mask=mask_slice)
-            image_tensor = augmented['image']    # numpy array
-            mask_tensor = augmented['mask']
+            image = np.transpose(image, (1, 2, 0))  # [H, W, 4]
+            augmented = self.transforms(image=image, mask=mask_stack)
+            image_tensor = augmented['image']  # [4, H, W]
+            mask_tensor = augmented['mask'].permute(2, 0, 1).float()    # [H, W, 3]
+            # mask_tensor = torch.from_numpy(mask_tensor).permute(2, 0, 1).long()  # [3, H, W]
         else:
-            image_tensor = torch.from_numpy(image).float()
-            mask_tensor = torch.from_numpy(mask_slice).long()
+            image_tensor = torch.from_numpy(image).float()  # [4, H, W]
+            mask_tensor = torch.from_numpy(mask_stack).permute(2, 0, 1).long()  # [3, H, W]
+
         return image_tensor, mask_tensor
+
+
+
+    # def __getitem__(self, idx):
+    #     patient_id, z = self.samples[idx]
+
+    #     volume = []
+    #     for mod in self.modalities:
+    #         path = os.path.join(self.root_dir, patient_id, f"{patient_id}_{mod}.nii")
+    #         data = nib.load(path).get_fdata()
+    #         slice_2d = data[:, :, z]
+
+    #         # Z-score normalization
+    #         mean = np.mean(slice_2d)
+    #         std = np.std(slice_2d)
+    #         if std == 0:
+    #             std = 1
+    #         norm_slice = (slice_2d - mean) / std
+    #         volume.append(norm_slice)
+
+    #     # Stack modalities into 4-channel image [C, H, W]
+    #     image = np.stack(volume, axis=0).astype(np.float32)  # shape [4, H, W]
+
+    #     # Load mask
+    #     mask_path = os.path.join(self.root_dir, patient_id, f"{patient_id}_seg.nii")
+    #     mask_data = nib.load(mask_path).get_fdata()
+    #     mask_slice = mask_data[:, :, z].astype(np.uint8)    # shape [H, W]
+
+    #     # Albumentations  HWC 
+    #     if self.transforms:
+    #         image = np.transpose(image, (1, 2, 0))  # [H, W, C]
+    #         augmented = self.transforms(image=image, mask=mask_slice)
+    #         image_tensor = augmented['image']    # numpy array
+    #         mask_tensor = augmented['mask']
+    #     else:
+    #         image_tensor = torch.from_numpy(image).float()
+    #         mask_tensor = torch.from_numpy(mask_slice).long()
+    #     return image_tensor, mask_tensor

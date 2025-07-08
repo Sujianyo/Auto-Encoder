@@ -20,6 +20,8 @@ class BCE_Dice(nn.Module):
         self.dice = DiceLoss()
         self.bce = nn.BCEWithLogitsLoss()
     def forward(self, output, target):
+        if output.ndim == target.ndim:
+            return self.bce(output, target)
         bce = self.bce(output, target.unsqueeze(1))
         
         # return bce + self.alpha * self.dice(output, target).mean()

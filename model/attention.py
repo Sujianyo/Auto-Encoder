@@ -156,7 +156,7 @@ class Attention(nn.MultiheadAttention):
                                                          kdim=None, vdim=None)
 
     def forward(self, query, key, value=None, pos_enc=None, pos_indexes=None):
-        print(query.shape, key.shape, value.shape, pos_enc.shape, pos_indexes.shape)
+        # print(query.shape, key.shape, value.shape, pos_enc.shape, pos_indexes.shape)
         w, bsz, embed_dim = query.size()
         head_dim = embed_dim // self.num_heads
         assert head_dim * self.num_heads == embed_dim, "embed_dim must be divisible by num_heads"
@@ -283,6 +283,7 @@ class Axial_Attention(nn.Module):
         # bachsize(N)=1 [W,2HN,C]->[H,2WN,C]
         # torch.save(attn_weight, 'self_attn_' + str(layer_idx) + '.dat')
         feat = feat + feat2
+        # print(feat.shape)
         return feat
     
 class TransformerCrossAttnLayer(nn.Module):
@@ -296,7 +297,7 @@ class TransformerCrossAttnLayer(nn.Module):
         self.cross_attn1 = Attention(hidden_dim, nhead)
         self.norm1 = nn.LayerNorm(hidden_dim)
         self.norm2 = nn.LayerNorm(hidden_dim)
-        self.merge=nn.Sequential(nn.Conv2d(in_channels=hidden_dim,out_channels=128,kernel_size=1,stride=1,padding=0),
+        self.merge=nn.Sequential(nn.Conv2d(in_channels=hidden_dim,out_channels=hidden_dim,kernel_size=1,stride=1,padding=0),
                                  nn.Conv2d(in_channels=hidden_dim,out_channels=hidden_dim,kernel_size=3,stride=1,padding=1))
         #self.merge1=nn.Conv2d(in_channels=2,out_channels=1,kernel_size=3,stride=1,padding=1)
     def forward(self, feat_left: Tensor, feat_right: Tensor, 
@@ -337,9 +338,9 @@ class TransformerCrossAttnLayer(nn.Module):
         feat_left = feat_left + feat_left_2
         # concat features
         feat = torch.cat([feat_left, feat_right], dim=1)  # Wx2HNxC
-        feat_new=self.merge(feat.permute(2,1,0).unsqueeze(0)).squeeze().permute(2,1,0)
-
-        return feat_new
+        # feat_new=self.merge(feat.permute(2,1,0).unsqueeze(0)).squeeze().permute(2,1,0)
+        # print(feat_new.shape)
+        return feat
 import math
 class PositionEncodingSine1DRelative(nn.Module):
 
@@ -473,11 +474,12 @@ class Transformer(nn.Module):
         else:
             pos_indexes_y = None
         feat = torch.cat([feat_left, feat_right], dim=1)
-        print(feat.shape)
-        return self._alternating_attn(feat,
+        # print(feat.shape)
+        x = self._alternating_attn(feat,
                         pos_enc, pos_indexes ,
                         pos_enc_y, pos_indexes_y ,
                         h)
+        return torch.cat([x[:, :h, :], x[:, h:, :]], dim=2).permute(2, 0, 1).unsqueeze(0)
 
 # m = Transformer(num_attn_layers=2)
 # pos = PositionEncodingSine1DRelative(num_pos_feats=128)

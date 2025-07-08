@@ -88,9 +88,10 @@ class Up(nn.Module):
             self.up = nn.ConvTranspose2d(in_channels // 2, in_channels // 2, kernel_size=2, stride=2)
 
         self.conv = DoubleConv(in_channels, out_channels)
-
-
-        self.trans = Transformer(in_channels//2, heads=heads, num_attn_layers=attention_layer)
+        self.attention_layer = attention_layer
+        if attention_layer != 0:
+            self.pos = PositionEncodingSine1DRelative(in_channels//2)
+            self.trans = Transformer(in_channels//2, nhead=heads, num_attn_layers=attention_layer)
         # self.atten = []
         # self.atten_layer = attention_layer
         # if axial:
@@ -114,7 +115,9 @@ class Up(nn.Module):
         # ])
 
     def forward(self, x1, x2):
+        
         x1 = self.up(x1)
+
         # input is CHW
         diffY = torch.tensor([x2.size()[2] - x1.size()[2]])
         diffX = torch.tensor([x2.size()[3] - x1.size()[3]])
@@ -133,8 +136,12 @@ class Up(nn.Module):
             # x1 = self.self_atten[i](x1)
             # x2 = self.cross_atten[i](x2, key=x1)
         # x = torch.cat([x1, x2], dim=1)
-        
-        return self.trans(x2, x1)
+        if self.attention_layer != 0:
+            ps_x, ps_y = self.pos(x1)
+            x = self.trans(x2, x1, ps_x, ps_y)
+        else:
+            x = torch.cat([x2, x1], dim=1)
+        return self.conv(x)
 
 
 

@@ -57,14 +57,14 @@ def show_case(case_id, writer=None, global_step=0):
         writer.add_image(f"Case/{case_id}", img_grid, global_step)
 
 # Path
-TRAIN_DIR = "/mnt/e/learning/dataset/brats20-dataset-training-validation/BraTS2020_TrainingData/MICCAI_BraTS2020_TrainingData"
+TRAIN_DIR = "../brats20/BraTS2020_TrainingData/MICCAI_BraTS2020_TrainingData"
 
 # Get samples
 train_cases = sorted([d for d in os.listdir(TRAIN_DIR) if d.startswith("BraTS20_Training")])
 sample_cases = random.sample(train_cases, 5)
 
 # TensorBoard writer
-writer = SummaryWriter(log_dir="./runs/brats")
+writer = SummaryWriter(log_dir="./runs/brats/Transformer")
 
 # Visualize
 for i, case_id in enumerate(sample_cases):
@@ -104,7 +104,7 @@ albumentations_transform = A.Compose([
     A.Normalize(mean=0.0, std=1.0),  
     ToTensorV2()
 ])
-TRAIN_DATASET_PATH = '/mnt/e/learning/dataset/brats20-dataset-training-validation/BraTS2020_TrainingData/MICCAI_BraTS2020_TrainingData/'
+TRAIN_DATASET_PATH = '../brats20/BraTS2020_TrainingData/MICCAI_BraTS2020_TrainingData/'
 # TEST_DATASET_PATH = '/mnt/e/learning/dataset/brats20-dataset-training-validation/BraTS2020_TrainingData/MICCAI_BraTS2020_ValidationData/'
 from torch.utils.data import random_split
 
@@ -119,29 +119,51 @@ train_sub, val_sub = random_split(train_dataset, [train_len, val_len])
 
 print(f"Total training samples: {len(train_dataset)}")
 # print(f"Total testing samples: {len(test_dataset)}")
-
+device = 'cuda:0'
 # Example single sample
 img, mask = train_dataset[0]
 print(mask.unique())
 print(img.shape)   # Should be: [4, 240, 240]
 print(mask.shape)  # Should be: [240, 240]
-from utils.tensorboard_utils import show_aug
+from utils.tensorboard_utils import show_aug2
 train_dataloader = DataLoader(train_sub, batch_size=batch_size, shuffle=True, num_workers=0)
 val_dataloader = DataLoader(val_sub, batch_size=batch_size)
 print(f'Train samples:{len(train_sub)}')
 print(f'Val samples:{len(val_sub)}')
-show_aug(train_dataloader, writer=writer)
+show_aug2(train_dataloader, writer=writer)
 from model.unet_model import UNet
-model = UNet(in_channel=4, out_channel=3)
+model = UNet(in_channel=4, out_channel=3, attention_layer=1).to(device)
 optimizer = torch.optim.AdamW(model.parameters(), lr=1e-4, weight_decay=1e-4)
 lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.99)
 from model.loss import Criterion
 criterion = Criterion()
 prev_best = np.inf
 
+from utils.train import train_one_epoch
+from utils.eval import evaluate
+
+print("Start training")
+start_epoch = 0
+epochs = 200
+for epoch in range(start_epoch, epochs):
+    # train
+    print("Epoch: %d" % epoch)
+    
+    _, train_loss = train_one_epoch(model, train_dataloader, optimizer, criterion, device, epoch)
+    print('train_loss', train_loss)
+    writer.add_scalar("Loss/train", train_loss, epoch)
 
 
-
+    torch.cuda.empty_cache()
+    print("Start evaluation")
+    eval_stats = evaluate(model, criterion, val_dataloader, device, epoch, False)
+    if eval_stats['crs'] < prev_best:
+        torch.save(model.state_dict(), 'model.pt')
+        prev_best = eval_stats['crs']
+    # print('VAL:', eval_stats)
+    writer.add_scalar("Loss/val", eval_stats['crs'], epoch)
+    writer.add_scalar("IOU/val", eval_stats['iou'], epoch)
+    writer.add_scalar("DICE/val", eval_stats['dice'], epoch)
 
 
 writer.close()

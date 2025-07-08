@@ -17,10 +17,10 @@ class UNet(nn.Module):
         self.down4 = Down(512, 512)
 
         # Decoder
-        self.up1 = Up(1024, 256, bilinear, attention_layer=attention_layer, axial=axial)
-        self.up2 = Up(512, 128, bilinear, attention_layer=attention_layer, axial=axial)
-        self.up3 = Up(256, 64, bilinear, attention_layer=attention_layer, axial=axial)
-        self.up4 = Up(128, 64, bilinear, attention_layer=attention_layer, axial=axial)
+        self.up1 = Up(1024, 256, bilinear, attention_layer=attention_layer)
+        self.up2 = Up(512, 128, bilinear, attention_layer=attention_layer)
+        self.up3 = Up(256, 64, bilinear, attention_layer=attention_layer )
+        self.up4 = Up(128, 64, bilinear, attention_layer=attention_layer)
         self.outc = OutConv(64, out_channel)
 
     def forward(self, x):
@@ -30,6 +30,7 @@ class UNet(nn.Module):
         x4 = self.down3(x3)
         x5 = self.down4(x4)
         x = self.up1(x5, x4)
+        
         x = self.up2(x, x3)
         x = self.up3(x, x2)
         x = self.up4(x, x1)
