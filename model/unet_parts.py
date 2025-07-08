@@ -90,19 +90,20 @@ class Up(nn.Module):
         self.conv = DoubleConv(in_channels, out_channels)
 
 
-        self.atten = []
-        self.atten_layer = attention_layer
-        if axial:
-            self.self_atten = nn.ModuleList([
-                Axial_Attention(out_channels, heads=heads, dropout=0.)
-                for _ in range(attention_layer)
-            ])
+        self.trans = Transformer(in_channels//2, heads=heads, num_attn_layers=attention_layer)
+        # self.atten = []
+        # self.atten_layer = attention_layer
+        # if axial:
+        #     self.self_atten = nn.ModuleList([
+        #         Axial_Attention(out_channels, heads=heads, dropout=0.)
+        #         for _ in range(attention_layer)
+        #     ])
 
-        else:
-            self.self_atten = nn.ModuleList([
-                MultiHeadAttention(out_channels, heads=heads, dropout=0.)
-                for _ in range(attention_layer)
-            ])
+        # else:
+        #     self.self_atten = nn.ModuleList([
+        #         MultiHeadAttention(out_channels, heads=heads, dropout=0.)
+        #         for _ in range(attention_layer)
+        #     ])
         # self.self_atten = nn.ModuleList([
         #     MultiHeadAttention(in_channels//2, heads=heads, dropout=0.)
         #     for _ in range(attention_layer)
@@ -121,10 +122,10 @@ class Up(nn.Module):
         x1 = F.pad(x1, [diffX // 2, diffX - diffX // 2,
                         diffY // 2, diffY - diffY // 2])
         
-        x = torch.cat([x2, x1], dim=1)
-        x = self.conv(x)
-        for i in range(self.atten_layer):
-            x = cp.checkpoint(self.self_atten[i], x)
+        # x = torch.cat([x2, x1], dim=1)
+        # x = self.conv(x)
+        # for i in range(self.atten_layer):
+        #     x = cp.checkpoint(self.self_atten[i], x)
         # for i in range(self.atten_layer):
         # for layer1, layer2 in map(self.self_atten, self.cross_atten):
             # x1 = cp.checkpoint(self.self_atten[i], x1)
@@ -133,7 +134,7 @@ class Up(nn.Module):
             # x2 = self.cross_atten[i](x2, key=x1)
         # x = torch.cat([x1, x2], dim=1)
         
-        return x
+        return self.trans(x2, x1)
 
 
 
