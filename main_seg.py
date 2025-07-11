@@ -58,6 +58,11 @@ def show_case(case_id, writer=None, global_step=0):
 
 # Path
 TRAIN_DIR = "../brats20/BraTS2020_TrainingData/MICCAI_BraTS2020_TrainingData"
+in_channel = 4
+out_channel = 1
+attention_layer = 2
+batch_size = 1
+device = 'cuda:1'
 
 # Get samples
 train_cases = sorted([d for d in os.listdir(TRAIN_DIR) if d.startswith("BraTS20_Training")])
@@ -93,7 +98,6 @@ for i, case_id in enumerate(sample_cases):
 #         return image_tensor, mask_tensor
 #     return transform
 image_size = (128, 128)
-batch_size = 1
 albumentations_transform = A.Compose([
     A.Resize(height=image_size[0], width=image_size[1]),
     A.HorizontalFlip(p=0.5),
@@ -119,7 +123,6 @@ train_sub, val_sub = random_split(train_dataset, [train_len, val_len])
 
 print(f"Total training samples: {len(train_dataset)}")
 # print(f"Total testing samples: {len(test_dataset)}")
-device = 'cuda:0'
 # Example single sample
 img, mask = train_dataset[0]
 print(mask.unique())
@@ -132,7 +135,7 @@ print(f'Train samples:{len(train_sub)}')
 print(f'Val samples:{len(val_sub)}')
 show_aug2(train_dataloader, writer=writer)
 from model.unet_model import UNet
-model = UNet(in_channel=4, out_channel=3, attention_layer=1).to(device)
+model = UNet(in_channel=in_channel, out_channel=out_channel, attention_layer=attention_layer).to(device)
 optimizer = torch.optim.AdamW(model.parameters(), lr=1e-4, weight_decay=1e-4)
 lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.99)
 from model.loss import Criterion
