@@ -164,6 +164,7 @@ class BraTSDataset(Dataset):
             except Exception as e:
                 print(f"[ERROR] Failed to load patient {patient_id}: {e}")
                 continue
+        self.samples = self.samples[:10]  
 
     def __len__(self):
         return len(self.samples)

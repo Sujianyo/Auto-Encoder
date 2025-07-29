@@ -73,12 +73,12 @@ class OutConv(nn.Module):
         return self.conv(x)
     
 
-from .attention import *
-
+# from .attention import *
+from swintrans import *
 class Up(nn.Module):
     """Upscaling then double conv"""
 
-    def __init__(self, in_channels, out_channels, bilinear=True, attention_layer=0, axial=False, heads=8):
+    def __init__(self, in_channels, out_channels, bilinear=True, transformer=False, img_size=None, patch_size=None, window_size=None, heads=8):
         super().__init__()
 
         # if bilinear, use the normal convolutions to reduce the number of channels
@@ -88,10 +88,13 @@ class Up(nn.Module):
             self.up = nn.ConvTranspose2d(in_channels // 2, in_channels // 2, kernel_size=2, stride=2)
 
         self.conv = DoubleConv(in_channels, out_channels)
-        self.attention_layer = attention_layer
-        if attention_layer != 0:
-            self.pos = PositionEncodingSine1DRelative(in_channels//2)
-            self.trans = Transformer(in_channels//2, nhead=heads, num_attn_layers=attention_layer)
+        self.transformer = transformer
+        if transformer:
+            self.trans = SwinTransformer(img_size=img_size, patch_size=patch_size, in_chans=in_channels, window_size=window_size, num_heads=heads)
+        # self.attention_layer = attention_layer
+        # if attention_layer != 0:
+        #     self.pos = PositionEncodingSine1DRelative(in_channels//2)
+        #     self.trans = Transformer(in_channels//2, nhead=heads, num_attn_layers=attention_layer)
         # self.atten = []
         # self.atten_layer = attention_layer
         # if axial:
@@ -136,11 +139,11 @@ class Up(nn.Module):
             # x1 = self.self_atten[i](x1)
             # x2 = self.cross_atten[i](x2, key=x1)
         # x = torch.cat([x1, x2], dim=1)
-        if self.attention_layer != 0:
-            ps_x, ps_y = self.pos(x1)
-            x = self.trans(x2, x1, ps_x, ps_y)
+        if self.transformer != 0:
+            x = self.trans(x2, x1)
         else:
             x = torch.cat([x2, x1], dim=1)
+        print(x.shape)
         return self.conv(x)
 
 
