@@ -74,7 +74,7 @@ class OutConv(nn.Module):
     
 
 # from .attention import *
-from swintrans import *
+from .swintrans import *
 class Up(nn.Module):
     """Upscaling then double conv"""
 
@@ -90,7 +90,7 @@ class Up(nn.Module):
         self.conv = DoubleConv(in_channels, out_channels)
         self.transformer = transformer
         if transformer:
-            self.trans = SwinTransformer(img_size=img_size, patch_size=patch_size, in_chans=in_channels, window_size=window_size, num_heads=heads)
+            self.trans = SwinTransformer(img_size=img_size, patch_size=patch_size, in_chans=in_channels//2, window_size=window_size, num_heads=heads)
         # self.attention_layer = attention_layer
         # if attention_layer != 0:
         #     self.pos = PositionEncodingSine1DRelative(in_channels//2)
@@ -141,9 +141,10 @@ class Up(nn.Module):
         # x = torch.cat([x1, x2], dim=1)
         if self.transformer != 0:
             x = self.trans(x2, x1)
+            x = torch.cat([x, x1], dim=1)
         else:
             x = torch.cat([x2, x1], dim=1)
-        print(x.shape)
+        # print(x.shape)
         return self.conv(x)
 
 

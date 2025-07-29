@@ -2,7 +2,7 @@
 #!/usr/bin/env bash
 python main_lgg.py  --epochs 200\
                 --patchify\
-                --image_size 256\
+                --image_size 128\
                 --device 'cuda:1'\
                 --batch_size 8\
                 --checkpoint pretrain\

@@ -62,7 +62,7 @@ in_channel = 4
 out_channel = 1
 attention_layer = 2
 batch_size = 1
-device = 'cuda:1'
+device = 'cuda:0'
 
 # Get samples
 train_cases = sorted([d for d in os.listdir(TRAIN_DIR) if d.startswith("BraTS20_Training")])
@@ -135,7 +135,9 @@ print(f'Train samples:{len(train_sub)}')
 print(f'Val samples:{len(val_sub)}')
 show_aug2(train_dataloader, writer=writer)
 from model.unet_model import UNet
-model = UNet(in_channel=in_channel, out_channel=out_channel, attention_layer=attention_layer).to(device)
+# net = UNet(in_channel=3, out_channel=1, transformer=True, img_size=[16, 32, 64, 128], patch_size=[4, 4, 4, 4], window_size=[8, 8, 8, 8], heads=4)
+
+model = UNet(in_channel=in_channel, out_channel=out_channel, transformer=True, img_size=[16, 32, 64, 128], patch_size=[4, 4, 4, 4], window_size=[8, 8, 8, 8], heads=4).to(device)
 optimizer = torch.optim.AdamW(model.parameters(), lr=1e-4, weight_decay=1e-4)
 lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.99)
 from model.loss import Criterion

@@ -1,7 +1,7 @@
 import torch.nn.functional as F
 
-# from .unet_parts import *
-from unet_parts import *
+from .unet_parts import *
+# from unet_parts import *
 
 class UNet(nn.Module):
     def __init__(self, in_channel = 3, out_channel = 1, bilinear=True, transformer=False, img_size=[None, None, None, None], patch_size=[None, None, None, None], window_size=[None, None, None, None], heads=4, active='relu', mem=False):
@@ -37,7 +37,7 @@ class UNet(nn.Module):
         return logits
 
 if __name__ == '__main__':
-    net = UNet(in_channel=3, out_channel=1, transformer=True, img_size=[128, 64, 32, 16], patch_size=[4, 4, 4, 4], window_size=[8, 8, 8, 8], heads=4)
+    net = UNet(in_channel=3, out_channel=1, transformer=True, img_size=[16, 32, 64, 128], patch_size=[4, 4, 4, 4], window_size=[8, 8, 8, 8], heads=4)
     # print(net)
     x = torch.rand(1, 3, 128, 128)
-    net(x).shape
+    print(net(x).shape)
