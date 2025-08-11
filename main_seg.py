@@ -56,20 +56,58 @@ def show_case(case_id, writer=None, global_step=0):
     if writer:
         writer.add_image(f"Case/{case_id}", img_grid, global_step)
 
+
+
+
+
+image_size = (128, 128)
+albumentations_transform = A.Compose([
+    A.Resize(height=image_size[0], width=image_size[1]),
+    A.HorizontalFlip(p=0.5),
+    A.VerticalFlip(p=0.5),
+    A.RandomRotate90(p=0.5),
+    A.Transpose(p=0.5),
+    A.ShiftScaleRotate(shift_limit=0.01, scale_limit=0.04, rotate_limit=0, p=0.25),
+    A.Normalize(mean=0.0, std=1.0),  
+    ToTensorV2()
+])
+
+
 # Path
 TRAIN_DIR = "../brats20/BraTS2020_TrainingData/MICCAI_BraTS2020_TrainingData"
+
 in_channel = 4
 out_channel = 1
-attention_layer = 2
-batch_size = 1
+# attention_layer = 2
+batch_size = 4
 device = 'cuda:0'
+labels = (1, 2, 4)
+mode = "merged"
 
+# logs = "./runs/brats/Transformer"
+# from model.unet_model import UNet
+# model = UNet(in_channel=in_channel, out_channel=out_channel, transformer=True, img_size=[16, 32, 64, 128], patch_size=[4, 4, 4, 4], window_size=[8, 8, 8, 8], heads=2).to(device)
+# model_name='Unet_swin.pt'
+
+logs = "./runs/brats/BaseLine"
+from model.unet_model import UNet
+model = UNet(in_channel=in_channel, out_channel=out_channel, transformer=False).to(device)
+model_name='Unet_base.pt'
 # Get samples
 train_cases = sorted([d for d in os.listdir(TRAIN_DIR) if d.startswith("BraTS20_Training")])
 sample_cases = random.sample(train_cases, 5)
 
+
+
+train_dataset = BraTSDataset(TRAIN_DIR, filter_empty_mask=True, transforms=albumentations_transform, label_mode=mode, selected_labels=labels)
+
+
+
+
+
+
 # TensorBoard writer
-writer = SummaryWriter(log_dir="./runs/brats/Transformer")
+writer = SummaryWriter(log_dir=logs)
 
 # Visualize
 for i, case_id in enumerate(sample_cases):
@@ -97,24 +135,13 @@ for i, case_id in enumerate(sample_cases):
 
 #         return image_tensor, mask_tensor
 #     return transform
-image_size = (128, 128)
-albumentations_transform = A.Compose([
-    A.Resize(height=image_size[0], width=image_size[1]),
-    A.HorizontalFlip(p=0.5),
-    A.VerticalFlip(p=0.5),
-    A.RandomRotate90(p=0.5),
-    A.Transpose(p=0.5),
-    A.ShiftScaleRotate(shift_limit=0.01, scale_limit=0.04, rotate_limit=0, p=0.25),
-    A.Normalize(mean=0.0, std=1.0),  
-    ToTensorV2()
-])
+
 TRAIN_DATASET_PATH = '../brats20/BraTS2020_TrainingData/MICCAI_BraTS2020_TrainingData/'
 # TEST_DATASET_PATH = '/mnt/e/learning/dataset/brats20-dataset-training-validation/BraTS2020_TrainingData/MICCAI_BraTS2020_ValidationData/'
 from torch.utils.data import random_split
 
 train_ratio = 0.8
 val_ratio = 1 - train_ratio
-train_dataset = BraTSDataset(TRAIN_DATASET_PATH, filter_empty_mask=True, transforms=albumentations_transform)
 # test_dataset = BraTSDataset(TEST_DATASET_PATH, filter_empty_mask=True)
 total_len = len(train_dataset)
 train_len = int(train_ratio*total_len)
@@ -134,10 +161,10 @@ val_dataloader = DataLoader(val_sub, batch_size=batch_size)
 print(f'Train samples:{len(train_sub)}')
 print(f'Val samples:{len(val_sub)}')
 show_aug2(train_dataloader, writer=writer)
-from model.unet_model import UNet
+# from model.unet_model import UNet
 # net = UNet(in_channel=3, out_channel=1, transformer=True, img_size=[16, 32, 64, 128], patch_size=[4, 4, 4, 4], window_size=[8, 8, 8, 8], heads=4)
 
-model = UNet(in_channel=in_channel, out_channel=out_channel, transformer=True, img_size=[16, 32, 64, 128], patch_size=[4, 4, 4, 4], window_size=[8, 8, 8, 8], heads=4).to(device)
+# model = UNet(in_channel=in_channel, out_channel=out_channel, transformer=True, img_size=[16, 32, 64, 128], patch_size=[4, 4, 4, 4], window_size=[8, 8, 8, 8], heads=2).to(device)
 optimizer = torch.optim.AdamW(model.parameters(), lr=1e-4, weight_decay=1e-4)
 lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.99)
 from model.loss import Criterion
@@ -163,7 +190,7 @@ for epoch in range(start_epoch, epochs):
     print("Start evaluation")
     eval_stats = evaluate(model, criterion, val_dataloader, device, epoch, False)
     if eval_stats['crs'] < prev_best:
-        torch.save(model.state_dict(), 'model.pt')
+        torch.save(model.state_dict(), model_name)
         prev_best = eval_stats['crs']
     # print('VAL:', eval_stats)
     writer.add_scalar("Loss/val", eval_stats['crs'], epoch)

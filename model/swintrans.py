@@ -426,9 +426,9 @@ class SwinTransformer(nn.Module):
         x1 = self.forward_up_features(x1, x2)
         # print(x1.shape)
         x = self.up_x4(x1)
-
+        # print(x.size)
         return x
     
-m = SwinTransformer()
-x = torch.rand(1, 3, 224, 224)
+# m = SwinTransformer()
+# x = torch.rand(1, 3, 224, 224)
 # print(m(x, x).shape)
