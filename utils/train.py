@@ -27,3 +27,9 @@ def train_one_epoch(model: torch.nn.Module, data_loader: Iterable, optimizer: to
         losses += loss
         i += 1
     return outputs, losses/i
+def pre_heated(model, loss, data, device):
+    torch.backends.cudnn.benchmark = False
+    a,b = next(iter(data))
+    losss = loss(model(a.to(device)), b.to(device))
+    losss.backward()
+    torch.cuda.synchronize()

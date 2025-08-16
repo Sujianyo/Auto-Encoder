@@ -79,20 +79,28 @@ TRAIN_DIR = "../brats20/BraTS2020_TrainingData/MICCAI_BraTS2020_TrainingData"
 in_channel = 4
 out_channel = 1
 # attention_layer = 2
-batch_size = 4
-device = 'cuda:0'
+batch_size = 128
+device = 'cuda:1'
 labels = (1, 2, 4)
 mode = "merged"
 
 # logs = "./runs/brats/Transformer"
 # from model.unet_model import UNet
 # model = UNet(in_channel=in_channel, out_channel=out_channel, transformer=True, img_size=[16, 32, 64, 128], patch_size=[4, 4, 4, 4], window_size=[8, 8, 8, 8], heads=2).to(device)
-# model_name='Unet_swin.pt'
+# model_name='Unet_swin.pth'
+# # model.load_state_dict(torch.load(model_name, weights_only=True))
+# start_epoch = 0
+
 
 logs = "./runs/brats/BaseLine"
 from model.unet_model import UNet
 model = UNet(in_channel=in_channel, out_channel=out_channel, transformer=False).to(device)
-model_name='Unet_base.pt'
+model_name='Unet_base.pth'
+# model.load_state_dict(torch.load("Unet_base.pt", map_location=device))
+# model.load_state_dict(torch.load(model_name))
+start_epoch = 0
+
+
 # Get samples
 train_cases = sorted([d for d in os.listdir(TRAIN_DIR) if d.startswith("BraTS20_Training")])
 sample_cases = random.sample(train_cases, 5)
@@ -156,8 +164,8 @@ print(mask.unique())
 print(img.shape)   # Should be: [4, 240, 240]
 print(mask.shape)  # Should be: [240, 240]
 from utils.tensorboard_utils import show_aug2
-train_dataloader = DataLoader(train_sub, batch_size=batch_size, shuffle=True, num_workers=0)
-val_dataloader = DataLoader(val_sub, batch_size=batch_size)
+train_dataloader = DataLoader(train_sub, batch_size=batch_size, shuffle=True, num_workers=0, pin_memory=True)
+val_dataloader = DataLoader(val_sub, batch_size=batch_size, pin_memory=True)
 print(f'Train samples:{len(train_sub)}')
 print(f'Val samples:{len(val_sub)}')
 show_aug2(train_dataloader, writer=writer)
@@ -171,16 +179,18 @@ from model.loss import Criterion
 criterion = Criterion()
 prev_best = np.inf
 
-from utils.train import train_one_epoch
+from utils.train import train_one_epoch, pre_heated
 from utils.eval import evaluate
 
+pre_heated(model, criterion, train_dataloader, device)
+
 print("Start training")
-start_epoch = 0
 epochs = 200
+
 for epoch in range(start_epoch, epochs):
     # train
     print("Epoch: %d" % epoch)
-    
+
     _, train_loss = train_one_epoch(model, train_dataloader, optimizer, criterion, device, epoch)
     print('train_loss', train_loss)
     writer.add_scalar("Loss/train", train_loss, epoch)
