@@ -79,7 +79,7 @@ TRAIN_DIR = "../brats20/BraTS2020_TrainingData/MICCAI_BraTS2020_TrainingData"
 in_channel = 4
 out_channel = 1
 # attention_layer = 2
-batch_size = 128
+batch_size = 256
 device = 'cuda:1'
 labels = (1, 2, 4)
 mode = "merged"
@@ -96,7 +96,7 @@ logs = "./runs/brats/BaseLine"
 from model.unet_model import UNet
 model = UNet(in_channel=in_channel, out_channel=out_channel, transformer=False).to(device)
 model_name='Unet_base.pth'
-# model.load_state_dict(torch.load("Unet_base.pt", map_location=device))
+# model.load_state_dict(torch.load("Unet_base.pth", map_location=device))
 # model.load_state_dict(torch.load(model_name))
 start_epoch = 0
 

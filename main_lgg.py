@@ -54,17 +54,29 @@ experiment_name = arg.experiment_name
 
 ## MODEL Name
 experiment_name = arg.experiment_name
-if arg.axial:
-    model = UNet(attention_layer=arg.num_layer, axial=True).to(device)
-    model_name = 'Unet_axial_attention'
-elif arg.patchify:
-    model = UNet(attention_layer=arg.num_layer, axial=False).to(device)
-    model_name = 'Unet_self_attention'
-else:
-    model = UNet(attention_layer=0).to(device)
-    model_name = 'Unet_baseline'
+# if arg.axial:
+#     model = UNet(attention_layer=arg.num_layer, axial=True).to(device)
+#     model_name = 'Unet_axial_attention'
+# elif arg.patchify:
+#     model = UNet(attention_layer=arg.num_layer, axial=False).to(device)
+#     model_name = 'Unet_self_attention'
+# else:
+#     model = UNet(attention_layer=0).to(device)
+#     model_name = 'Unet_baseline'
+models = 'transformer'
+from model.unet_model import UNet
+model = UNet(in_channel=3, out_channel=1, transformer=True, img_size=[16, 32, 64, 128], patch_size=[4, 4, 4, 4], window_size=[8, 8, 8, 8], heads=2).to(device)
+model_name='Unet_swin_lgg.pth'
+
+# from model.unet_model import UNet
+# models = 'baseline'
+# model = UNet(in_channel=3, out_channel=1, transformer=False).to(device)
+# model_name='Unet_base_lgg.pth'
+# model.load_state_dict(torch.load(model_name, weights_only=True))
+# start_epoch = 0
+
 timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-log_dir = os.path.join("runs", experiment_name, model_name, timestamp)
+log_dir = os.path.join("runs", experiment_name, models, timestamp)
 writer = SummaryWriter(log_dir=log_dir)
 
 if arg.dataset == 'lgg_brain':
@@ -118,7 +130,6 @@ criterion = Criterion()
 prev_best = np.inf
 
 print("Start training")
-start_epoch = 0
 epochs = arg.epochs
 for epoch in range(start_epoch, epochs):
     # train
@@ -133,7 +144,7 @@ for epoch in range(start_epoch, epochs):
     print("Start evaluation")
     eval_stats = evaluate(model, criterion, val_dataloader, device, epoch, False)
     if eval_stats['crs'] < prev_best:
-        torch.save(model.state_dict(), 'model.pt')
+        torch.save(model.state_dict(), model_name)
         prev_best = eval_stats['crs']
     # print('VAL:', eval_stats)
     writer.add_scalar("Loss/val", eval_stats['crs'], epoch)
