@@ -74,13 +74,13 @@ albumentations_transform = A.Compose([
 
 
 # Path
-TRAIN_DIR = "../brats20/BraTS2020_TrainingData/MICCAI_BraTS2020_TrainingData"
+TRAIN_DIR = "../../Downloads/BraTS2020_TrainingData/MICCAI_BraTS2020_TrainingData"
 
 in_channel = 4
 out_channel = 1
 # attention_layer = 2
-batch_size = 256
-device = 'cuda:1'
+batch_size = 96
+device = 'cuda:0'
 labels = (1, 2, 4)
 mode = "merged"
 
@@ -144,7 +144,7 @@ for i, case_id in enumerate(sample_cases):
 #         return image_tensor, mask_tensor
 #     return transform
 
-TRAIN_DATASET_PATH = '../brats20/BraTS2020_TrainingData/MICCAI_BraTS2020_TrainingData/'
+TRAIN_DATASET_PATH = '../../Downloads/brats20/BraTS2020_TrainingData/MICCAI_BraTS2020_TrainingData/'
 # TEST_DATASET_PATH = '/mnt/e/learning/dataset/brats20-dataset-training-validation/BraTS2020_TrainingData/MICCAI_BraTS2020_ValidationData/'
 from torch.utils.data import random_split
 
